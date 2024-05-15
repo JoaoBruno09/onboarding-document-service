@@ -1,7 +1,7 @@
 package com.bank.onboarding.documentservice.controllers;
 
 import com.bank.onboarding.commonslib.persistence.models.Document;
-import com.bank.onboarding.commonslib.persistence.services.DocumentService;
+import com.bank.onboarding.commonslib.persistence.services.DocumentRepoService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -15,10 +15,10 @@ import java.util.List;
 @RequiredArgsConstructor
 public class DocumentController {
 
-    private final DocumentService documentService;
+    private final DocumentRepoService documentRepoService;
 
     @GetMapping("/test")
     public List<Document> getDocuments() {
-        return documentService.getAllDocuments();
+        return documentRepoService.getAllDocuments();
     }
 }
