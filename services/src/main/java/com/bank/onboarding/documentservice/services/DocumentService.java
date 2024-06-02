@@ -1,7 +1,7 @@
 package com.bank.onboarding.documentservice.services;
 
-import com.bank.onboarding.commonslib.utils.kafka.CreateAccountEvent;
-import com.bank.onboarding.commonslib.utils.kafka.ErrorEvent;
+import com.bank.onboarding.commonslib.utils.kafka.models.CreateAccountEvent;
+import com.bank.onboarding.commonslib.utils.kafka.models.ErrorEvent;
 import com.bank.onboarding.commonslib.web.dtos.document.DeleteDocumentRequestDTO;
 import com.bank.onboarding.commonslib.web.dtos.document.DocumentDTO;
 import com.bank.onboarding.commonslib.web.dtos.document.UploadDocumentRequestDTO;

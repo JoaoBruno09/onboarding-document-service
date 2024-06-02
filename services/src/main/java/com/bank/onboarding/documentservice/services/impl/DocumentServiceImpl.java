@@ -7,8 +7,8 @@ import com.bank.onboarding.commonslib.persistence.services.AccountRefRepoService
 import com.bank.onboarding.commonslib.persistence.services.CustomerRefRepoService;
 import com.bank.onboarding.commonslib.persistence.services.DocumentRepoService;
 import com.bank.onboarding.commonslib.utils.OnboardingUtils;
-import com.bank.onboarding.commonslib.utils.kafka.CreateAccountEvent;
-import com.bank.onboarding.commonslib.utils.kafka.ErrorEvent;
+import com.bank.onboarding.commonslib.utils.kafka.models.CreateAccountEvent;
+import com.bank.onboarding.commonslib.utils.kafka.models.ErrorEvent;
 import com.bank.onboarding.commonslib.utils.mappers.CustomerMapper;
 import com.bank.onboarding.commonslib.utils.mappers.DocumentMapper;
 import com.bank.onboarding.commonslib.web.dtos.account.AccountRefDTO;
