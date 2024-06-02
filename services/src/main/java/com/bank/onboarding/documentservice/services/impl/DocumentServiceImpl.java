@@ -15,6 +15,7 @@ import com.bank.onboarding.commonslib.web.dtos.account.AccountRefDTO;
 import com.bank.onboarding.commonslib.web.dtos.account.CreateAccountRequestDTO;
 import com.bank.onboarding.commonslib.web.dtos.customer.CustomerDocumentsRequest;
 import com.bank.onboarding.commonslib.web.dtos.customer.CustomerRefDTO;
+import com.bank.onboarding.commonslib.web.dtos.customer.IntervenientRequestDTO;
 import com.bank.onboarding.commonslib.web.dtos.document.DeleteDocumentRequestDTO;
 import com.bank.onboarding.commonslib.web.dtos.document.DocumentDTO;
 import com.bank.onboarding.commonslib.web.dtos.document.UploadDocumentRequestDTO;
@@ -31,6 +32,7 @@ import java.util.Optional;
 import static com.bank.onboarding.commonslib.persistence.constants.OnboardingConstants.DOCUMENT_TYPES_CREATE_ACCOUNT_REQUEST;
 import static com.bank.onboarding.commonslib.persistence.constants.OnboardingConstants.DOCUMENT_TYPES_PHASE_3_ACCOUNT;
 import static com.bank.onboarding.commonslib.persistence.constants.OnboardingConstants.DOCUMENT_TYPES_PHASE_3_CUSTOMER;
+import static com.bank.onboarding.commonslib.persistence.enums.OperationType.ADD_INTERVENIENT;
 import static com.bank.onboarding.commonslib.persistence.enums.OperationType.CREATE_ACCOUNT;
 
 @Slf4j
@@ -54,7 +56,8 @@ public class DocumentServiceImpl implements DocumentService {
 
     @Override
     public void createDocumentForCreateAccountOperation(CreateAccountEvent createAccountEvent) {
-        List<CustomerDocumentsRequest> customerDocuments =  Optional.ofNullable(createAccountEvent.getCreateAccountRequestDTO()).map(CreateAccountRequestDTO::getCustomerDocuments)
+        List<CustomerDocumentsRequest> customerDocuments =  Optional.ofNullable(createAccountEvent.getCreateAccountRequestDTO())
+                .map(CreateAccountRequestDTO::getCustomerIntervenient).map(IntervenientRequestDTO::getCustomerDocuments)
                 .orElseThrow(() -> new OnboardingException("Não foram inseridos documentos")).stream().toList();
 
         if(!customerDocuments.stream().allMatch(document -> DOCUMENT_TYPES_CREATE_ACCOUNT_REQUEST.contains(document.getDocumentType()))){
@@ -86,6 +89,8 @@ public class DocumentServiceImpl implements DocumentService {
     public void handleErrorEvent(ErrorEvent errorEvent) {
         if(CREATE_ACCOUNT.equals(errorEvent.getOperationType())){
             accountRefRepoService.deleteAccountById(errorEvent.getAccountRefDTO().getAccountId());
+        }else if (ADD_INTERVENIENT.equals(errorEvent.getOperationType())){
+            customerRefRepoService.deleteCustomerById(errorEvent.getCustomerRefDTO().getCustomerId());
         }
     }
 
