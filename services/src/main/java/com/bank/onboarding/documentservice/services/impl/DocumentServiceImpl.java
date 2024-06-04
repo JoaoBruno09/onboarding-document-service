@@ -15,7 +15,7 @@ import com.bank.onboarding.commonslib.web.dtos.account.AccountRefDTO;
 import com.bank.onboarding.commonslib.web.dtos.account.CreateAccountRequestDTO;
 import com.bank.onboarding.commonslib.web.dtos.customer.CustomerDocumentsRequest;
 import com.bank.onboarding.commonslib.web.dtos.customer.CustomerRefDTO;
-import com.bank.onboarding.commonslib.web.dtos.customer.IntervenientRequestDTO;
+import com.bank.onboarding.commonslib.web.dtos.customer.CustomerRequestDTO;
 import com.bank.onboarding.commonslib.web.dtos.document.DeleteDocumentRequestDTO;
 import com.bank.onboarding.commonslib.web.dtos.document.DocumentDTO;
 import com.bank.onboarding.commonslib.web.dtos.document.UploadDocumentRequestDTO;
@@ -57,7 +57,7 @@ public class DocumentServiceImpl implements DocumentService {
     @Override
     public void createDocumentForCreateAccountOperation(CreateAccountEvent createAccountEvent) {
         List<CustomerDocumentsRequest> customerDocuments =  Optional.ofNullable(createAccountEvent.getCreateAccountRequestDTO())
-                .map(CreateAccountRequestDTO::getCustomerIntervenient).map(IntervenientRequestDTO::getCustomerDocuments)
+                .map(CreateAccountRequestDTO::getCustomerIntervenient).map(CustomerRequestDTO::getCustomerDocuments)
                 .orElseThrow(() -> new OnboardingException("Não foram inseridos documentos")).stream().toList();
 
         if(!customerDocuments.stream().allMatch(document -> DOCUMENT_TYPES_CREATE_ACCOUNT_REQUEST.contains(document.getDocumentType()))){
