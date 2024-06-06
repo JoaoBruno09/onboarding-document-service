@@ -5,6 +5,7 @@ import com.bank.onboarding.commonslib.web.dtos.document.DeleteDocumentRequestDTO
 import com.bank.onboarding.commonslib.web.dtos.document.DocumentDTO;
 import com.bank.onboarding.commonslib.web.dtos.document.UploadDocumentRequestDTO;
 import com.bank.onboarding.documentservice.services.DocumentService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -23,7 +24,7 @@ public class DocumentController {
     private final DocumentService documentService;
 
     @PutMapping
-    public ResponseEntity<?> uploadDoc(@RequestBody UploadDocumentRequestDTO uploadDocumentRequest){
+    public ResponseEntity<?> uploadDoc(@RequestBody @Valid UploadDocumentRequestDTO uploadDocumentRequest){
         try {
             final DocumentDTO documentDTO = documentService.uploadDoc(uploadDocumentRequest);
             return new ResponseEntity<>(documentDTO, HttpStatus.OK);
@@ -34,7 +35,7 @@ public class DocumentController {
     }
 
     @DeleteMapping
-    public ResponseEntity<?> deleteDoc(@RequestBody DeleteDocumentRequestDTO deleteDocumentRequestDTO){
+    public ResponseEntity<?> deleteDoc(@RequestBody @Valid DeleteDocumentRequestDTO deleteDocumentRequestDTO){
         try {
             documentService.deleteDoc(deleteDocumentRequestDTO);
             return new ResponseEntity<>(null, HttpStatus.OK);
