@@ -33,6 +33,7 @@ import static com.bank.onboarding.commonslib.persistence.constants.OnboardingCon
 import static com.bank.onboarding.commonslib.persistence.constants.OnboardingConstants.DOCUMENT_TYPES_PHASE_3_ACCOUNT;
 import static com.bank.onboarding.commonslib.persistence.constants.OnboardingConstants.DOCUMENT_TYPES_PHASE_3_CUSTOMER;
 import static com.bank.onboarding.commonslib.persistence.enums.OperationType.ADD_INTERVENIENT;
+import static com.bank.onboarding.commonslib.persistence.enums.OperationType.ADD_REL;
 import static com.bank.onboarding.commonslib.persistence.enums.OperationType.CREATE_ACCOUNT;
 
 @Slf4j
@@ -89,7 +90,8 @@ public class DocumentServiceImpl implements DocumentService {
     public void handleErrorEvent(ErrorEvent errorEvent) {
         if(CREATE_ACCOUNT.equals(errorEvent.getOperationType())){
             accountRefRepoService.deleteAccountById(errorEvent.getAccountRefDTO().getAccountId());
-        }else if (ADD_INTERVENIENT.equals(errorEvent.getOperationType())){
+        }else if (Boolean.TRUE.equals(errorEvent.getIsNewCustomer())
+                && (ADD_INTERVENIENT.equals(errorEvent.getOperationType()) || ADD_REL.equals(errorEvent.getOperationType()))){
             customerRefRepoService.deleteCustomerById(errorEvent.getCustomerRefDTO().getCustomerId());
         }
     }
