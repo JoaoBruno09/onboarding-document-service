@@ -1,10 +1,12 @@
 package com.bank.onboarding.documentservice.controllers;
 
 import com.bank.onboarding.commonslib.persistence.exceptions.OnboardingException;
+import com.bank.onboarding.commonslib.utils.OnboardingUtils;
 import com.bank.onboarding.commonslib.web.dtos.document.DeleteDocumentRequestDTO;
 import com.bank.onboarding.commonslib.web.dtos.document.DocumentDTO;
 import com.bank.onboarding.commonslib.web.dtos.document.UploadDocumentRequestDTO;
 import com.bank.onboarding.documentservice.services.DocumentService;
+import feign.Request;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -22,6 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class DocumentController {
 
     private final DocumentService documentService;
+    private final OnboardingUtils onboardingUtils;
 
     @PutMapping
     public ResponseEntity<?> uploadDoc(@RequestBody @Valid UploadDocumentRequestDTO uploadDocumentRequest){
@@ -30,7 +33,7 @@ public class DocumentController {
             return new ResponseEntity<>(documentDTO, HttpStatus.OK);
         }
         catch(OnboardingException e ) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+            return onboardingUtils.buildResponseEntity(Request.HttpMethod.PUT.name(), e.getMessage());
         }
     }
 
@@ -41,7 +44,7 @@ public class DocumentController {
             return new ResponseEntity<>(null, HttpStatus.OK);
         }
         catch(OnboardingException e ) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+            return onboardingUtils.buildResponseEntity(Request.HttpMethod.DELETE.name(), e.getMessage());
         }
     }
 }
