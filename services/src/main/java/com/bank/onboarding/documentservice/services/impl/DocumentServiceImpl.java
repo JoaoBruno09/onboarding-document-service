@@ -1,6 +1,7 @@
 package com.bank.onboarding.documentservice.services.impl;
 
 import com.bank.onboarding.commonslib.persistence.enums.OperationType;
+import com.bank.onboarding.commonslib.persistence.enums.ValidationType;
 import com.bank.onboarding.commonslib.persistence.exceptions.OnboardingException;
 import com.bank.onboarding.commonslib.persistence.models.Document;
 import com.bank.onboarding.commonslib.persistence.services.AccountRefRepoService;
@@ -10,6 +11,7 @@ import com.bank.onboarding.commonslib.utils.OnboardingUtils;
 import com.bank.onboarding.commonslib.utils.kafka.KafkaProducer;
 import com.bank.onboarding.commonslib.utils.kafka.models.CreateAccountEvent;
 import com.bank.onboarding.commonslib.utils.kafka.models.ErrorEvent;
+import com.bank.onboarding.commonslib.utils.kafka.models.ValidationEvent;
 import com.bank.onboarding.commonslib.utils.mappers.CustomerMapper;
 import com.bank.onboarding.commonslib.utils.mappers.DocumentMapper;
 import com.bank.onboarding.commonslib.web.dtos.account.AccountRefDTO;
@@ -39,6 +41,7 @@ import static com.bank.onboarding.commonslib.persistence.enums.OperationType.ADD
 import static com.bank.onboarding.commonslib.persistence.enums.OperationType.ADD_REL;
 import static com.bank.onboarding.commonslib.persistence.enums.OperationType.CREATE_ACCOUNT;
 import static com.bank.onboarding.commonslib.persistence.enums.OperationType.DOCS_UPLOAD;
+import static com.bank.onboarding.commonslib.persistence.enums.ValidationType.VALID_DOCUMENTS;
 
 @Slf4j
 @Service
@@ -135,7 +138,7 @@ public class DocumentServiceImpl implements DocumentService {
                 documentRepoService.getAllDocumentsByAccountId(accountId).forEach(document -> documentTypes.add(document.getDocumentType()));
 
                 if(!documentTypes.isEmpty() && new HashSet<>(documentTypes).containsAll(DOCUMENT_TYPES_PHASE_3_ACCOUNT))
-                    kafkaProducer.sendEvent(accountTopicName, DOCS_UPLOAD, accountId);
+                    kafkaProducer.sendEvent(accountTopicName, DOCS_UPLOAD, ValidationEvent.builder().validationType(VALID_DOCUMENTS).accountId(accountId).build());
             }else {
                 documentRepoService.deleteDocumentByAccountIdOrCustomerId(accountId, true);
             }
@@ -144,12 +147,6 @@ public class DocumentServiceImpl implements DocumentService {
 
             if(DOCS_UPLOAD.equals(operationType)){
                 documentDTOToBeReturned = saveDoc(customerId, documentBase64, documentType, false);
-
-                List<String> documentTypes = new ArrayList<>();
-                documentRepoService.getAllDocumentsByCustomerId(customerId).forEach(document -> documentTypes.add(document.getDocumentType()));
-
-                if(!documentTypes.isEmpty() && new HashSet<>(documentTypes).containsAll(DOCUMENT_TYPES_PHASE_3_CUSTOMER))
-                    kafkaProducer.sendEvent(customerTopicName, DOCS_UPLOAD, customerId);
             }else {
                 documentRepoService.deleteDocumentByAccountIdOrCustomerId(customerId, false);
             }
