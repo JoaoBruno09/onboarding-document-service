@@ -1,17 +1,15 @@
 package com.bank.onboarding.documentservice.services.impl;
 
 import com.bank.onboarding.commonslib.persistence.enums.OperationType;
-import com.bank.onboarding.commonslib.persistence.enums.ValidationType;
 import com.bank.onboarding.commonslib.persistence.exceptions.OnboardingException;
 import com.bank.onboarding.commonslib.persistence.models.Document;
-import com.bank.onboarding.commonslib.persistence.services.AccountRefRepoService;
 import com.bank.onboarding.commonslib.persistence.services.CustomerRefRepoService;
 import com.bank.onboarding.commonslib.persistence.services.DocumentRepoService;
+import com.bank.onboarding.commonslib.utils.AsyncExecutor;
 import com.bank.onboarding.commonslib.utils.OnboardingUtils;
 import com.bank.onboarding.commonslib.utils.kafka.KafkaProducer;
 import com.bank.onboarding.commonslib.utils.kafka.models.CreateAccountEvent;
-import com.bank.onboarding.commonslib.utils.kafka.models.ErrorEvent;
-import com.bank.onboarding.commonslib.utils.kafka.models.ValidationEvent;
+import com.bank.onboarding.commonslib.utils.kafka.models.DocUploadEvent;
 import com.bank.onboarding.commonslib.utils.mappers.CustomerMapper;
 import com.bank.onboarding.commonslib.utils.mappers.DocumentMapper;
 import com.bank.onboarding.commonslib.web.dtos.account.AccountRefDTO;
@@ -23,6 +21,7 @@ import com.bank.onboarding.commonslib.web.dtos.document.DeleteDocumentRequestDTO
 import com.bank.onboarding.commonslib.web.dtos.document.DocumentDTO;
 import com.bank.onboarding.commonslib.web.dtos.document.UploadDocumentRequestDTO;
 import com.bank.onboarding.documentservice.services.DocumentService;
+import io.micrometer.common.util.StringUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -33,15 +32,13 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 
 import static com.bank.onboarding.commonslib.persistence.constants.OnboardingConstants.DOCUMENT_TYPES_CREATE_ACCOUNT_REQUEST;
 import static com.bank.onboarding.commonslib.persistence.constants.OnboardingConstants.DOCUMENT_TYPES_PHASE_3_ACCOUNT;
 import static com.bank.onboarding.commonslib.persistence.constants.OnboardingConstants.DOCUMENT_TYPES_PHASE_3_CUSTOMER;
-import static com.bank.onboarding.commonslib.persistence.enums.OperationType.ADD_INTERVENIENT;
-import static com.bank.onboarding.commonslib.persistence.enums.OperationType.ADD_REL;
 import static com.bank.onboarding.commonslib.persistence.enums.OperationType.CREATE_ACCOUNT;
 import static com.bank.onboarding.commonslib.persistence.enums.OperationType.DOCS_UPLOAD;
-import static com.bank.onboarding.commonslib.persistence.enums.ValidationType.VALID_DOCUMENTS;
 
 @Slf4j
 @Service
@@ -49,9 +46,9 @@ import static com.bank.onboarding.commonslib.persistence.enums.ValidationType.VA
 public class DocumentServiceImpl implements DocumentService {
 
     private final DocumentRepoService documentRepoService;
-    private final AccountRefRepoService accountRefRepoService;
     private final CustomerRefRepoService customerRefRepoService;
     private final OnboardingUtils onboardingUtils;
+    private final AsyncExecutor asyncExecutor;
     private final KafkaProducer kafkaProducer;
 
     @Value("${spring.kafka.producer.customer.topic-name}")
@@ -81,27 +78,19 @@ public class DocumentServiceImpl implements DocumentService {
                     .documentType(documentType)
                     .documentBase64(document.getDocumentBase64())
                     .uploadedTime(LocalDateTime.now())
-                    .customerId(createAccountEvent.getCustomerRefDTO().getCustomerId())
+                    .customerNumber(createAccountEvent.getCustomerRefDTO().getCustomerNumber())
                     .build());
         });
         customerRefRepoService.saveCustomerRefDB(CustomerMapper.INSTANCE.toCustomerRef(createAccountEvent.getCustomerRefDTO()));
     }
 
     private void sendCreationEventErrors(AccountRefDTO accountRefDTO, CustomerRefDTO customerRefDTO) {
-        onboardingUtils.sendErrorEvent(customerTopicName, accountRefDTO, customerRefDTO, CREATE_ACCOUNT);
-        onboardingUtils.sendErrorEvent(accountTopicName, accountRefDTO, customerRefDTO, CREATE_ACCOUNT);
-        onboardingUtils.sendErrorEvent(interventionTopicName, accountRefDTO, customerRefDTO, CREATE_ACCOUNT);
-        accountRefRepoService.deleteAccountById(accountRefDTO.getAccountId());
-    }
+        List<CompletableFuture<?>> completableFutures = new ArrayList<>();
+        completableFutures.add(CompletableFuture.runAsync(() -> onboardingUtils.sendErrorEvent(customerTopicName, accountRefDTO, customerRefDTO, CREATE_ACCOUNT)));
+        completableFutures.add(CompletableFuture.runAsync(() -> onboardingUtils.sendErrorEvent(accountTopicName, accountRefDTO, customerRefDTO, CREATE_ACCOUNT)));
+        completableFutures.add(CompletableFuture.runAsync(() -> onboardingUtils.sendErrorEvent(interventionTopicName, accountRefDTO, customerRefDTO, CREATE_ACCOUNT)));
 
-    @Override
-    public void handleErrorEvent(ErrorEvent errorEvent) {
-        if(CREATE_ACCOUNT.equals(errorEvent.getOperationType())){
-            accountRefRepoService.deleteAccountById(errorEvent.getAccountRefDTO().getAccountId());
-        }else if (Boolean.TRUE.equals(errorEvent.getIsNewCustomer())
-                && (ADD_INTERVENIENT.equals(errorEvent.getOperationType()) || ADD_REL.equals(errorEvent.getOperationType()))){
-            customerRefRepoService.deleteCustomerById(errorEvent.getCustomerRefDTO().getCustomerId());
-        }
+        asyncExecutor.execute(completableFutures);
     }
 
     @Override
@@ -129,26 +118,36 @@ public class DocumentServiceImpl implements DocumentService {
         DocumentDTO documentDTOToBeReturned = null;
 
         if(accountNumber != null && DOCUMENT_TYPES_PHASE_3_ACCOUNT.contains(documentType)){
-            String accountId = accountRefRepoService.findAccountRefByAccountNumber(accountNumber).getId();
-
             if(DOCS_UPLOAD.equals(operationType)){
-                documentDTOToBeReturned = saveDoc(accountId, documentBase64, documentType, true);
+                documentDTOToBeReturned = saveDoc(accountNumber, documentBase64, documentType, true);
 
-                List<String> documentTypes = new ArrayList<>();
-                documentRepoService.getAllDocumentsByAccountId(accountId).forEach(document -> documentTypes.add(document.getDocumentType()));
+                boolean accountHasAllDocs = new HashSet<>(documentRepoService.getAllDocumentsByAccountNumber(accountNumber).stream()
+                        .map(Document::getDocumentType)
+                        .filter(StringUtils::isNotBlank)
+                        .toList())
+                        .containsAll(DOCUMENT_TYPES_PHASE_3_ACCOUNT);
 
-                if(!documentTypes.isEmpty() && new HashSet<>(documentTypes).containsAll(DOCUMENT_TYPES_PHASE_3_ACCOUNT))
-                    kafkaProducer.sendEvent(accountTopicName, DOCS_UPLOAD, ValidationEvent.builder().validationType(VALID_DOCUMENTS).accountId(accountId).build());
+                if(accountHasAllDocs)
+                    kafkaProducer.sendEvent(accountTopicName, DOCS_UPLOAD, DocUploadEvent.builder().accountNumber(accountNumber).areDocsValid(true).build());
             }else {
-                documentRepoService.deleteDocumentByAccountIdOrCustomerId(accountId, true);
+                documentRepoService.deleteDocumentByAccountNumberOrCustomerNumber(accountNumber, true);
+                kafkaProducer.sendEvent(accountTopicName, DOCS_UPLOAD, DocUploadEvent.builder().accountNumber(accountNumber).areDocsValid(false).build());
             }
         } else if(customerNumber != null && DOCUMENT_TYPES_PHASE_3_CUSTOMER.contains(documentType)){
-            String customerId = customerRefRepoService.findCustomerRefByCustomerNumber(customerNumber).getId();
-
             if(DOCS_UPLOAD.equals(operationType)){
-                documentDTOToBeReturned = saveDoc(customerId, documentBase64, documentType, false);
+                documentDTOToBeReturned = saveDoc(customerNumber, documentBase64, documentType, false);
+
+                boolean customerHasAllDocs = new HashSet<>(documentRepoService.getAllDocumentsByCustomerNumber(customerNumber).stream()
+                        .map(Document::getDocumentType)
+                        .filter(StringUtils::isNotBlank)
+                        .toList())
+                        .containsAll(DOCUMENT_TYPES_PHASE_3_CUSTOMER);
+
+                if(customerHasAllDocs)
+                    kafkaProducer.sendEvent(accountTopicName, DOCS_UPLOAD, DocUploadEvent.builder().accountNumber(accountNumber).areDocsValid(true).build());
             }else {
-                documentRepoService.deleteDocumentByAccountIdOrCustomerId(customerId, false);
+                documentRepoService.deleteDocumentByAccountNumberOrCustomerNumber(customerNumber, false);
+                kafkaProducer.sendEvent(accountTopicName, DOCS_UPLOAD, DocUploadEvent.builder().customerNumber(customerNumber).areDocsValid(false).build());
             }
         } else{
             throw new OnboardingException("O tipo de documento introduzido é inválido");
@@ -164,8 +163,8 @@ public class DocumentServiceImpl implements DocumentService {
                     .documentType(documentType)
                     .documentBase64(documentBase64)
                     .uploadedTime(LocalDateTime.now())
-                    .accountId(isAccountDoc ? id : null)
-                    .customerId(isAccountDoc ? null : id)
+                    .accountNumber(isAccountDoc ? id : null)
+                    .customerNumber(isAccountDoc ? null : id)
                     .build());
 
             return DocumentMapper.INSTANCE.toDocumentDTO(documentSaved);
