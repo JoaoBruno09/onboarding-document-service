@@ -10,6 +10,7 @@ import feign.Request;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -26,11 +27,11 @@ public class DocumentController {
     private final DocumentService documentService;
     private final OnboardingUtils onboardingUtils;
 
-    @PutMapping
+    @PutMapping(produces = MediaType.APPLICATION_JSON_VALUE, consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> uploadDoc(@RequestBody @Valid UploadDocumentRequestDTO uploadDocumentRequest){
         try {
             final DocumentDTO documentDTO = documentService.uploadDoc(uploadDocumentRequest);
-            return new ResponseEntity<>(documentDTO, HttpStatus.OK);
+            return new ResponseEntity<>(documentDTO, HttpStatus.CREATED);
         }
         catch(OnboardingException e ) {
             return onboardingUtils.buildResponseEntity(Request.HttpMethod.PUT.name(), e.getMessage());
@@ -41,7 +42,7 @@ public class DocumentController {
     public ResponseEntity<?> deleteDoc(@RequestBody @Valid DeleteDocumentRequestDTO deleteDocumentRequestDTO){
         try {
             documentService.deleteDoc(deleteDocumentRequestDTO);
-            return new ResponseEntity<>(null, HttpStatus.OK);
+            return new ResponseEntity<>(HttpStatus.OK);
         }
         catch(OnboardingException e ) {
             return onboardingUtils.buildResponseEntity(Request.HttpMethod.DELETE.name(), e.getMessage());
