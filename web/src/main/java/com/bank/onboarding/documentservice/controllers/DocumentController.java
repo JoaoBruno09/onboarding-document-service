@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 
 @RestController
-@RequestMapping("/document")
+@RequestMapping("documents")
 @RequiredArgsConstructor
 public class DocumentController {
 
@@ -42,7 +42,7 @@ public class DocumentController {
     public ResponseEntity<?> deleteDoc(@RequestBody @Valid DeleteDocumentRequestDTO deleteDocumentRequestDTO){
         try {
             documentService.deleteDoc(deleteDocumentRequestDTO);
-            return new ResponseEntity<>(HttpStatus.OK);
+            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
         }
         catch(OnboardingException e ) {
             return onboardingUtils.buildResponseEntity(Request.HttpMethod.DELETE.name(), e.getMessage());

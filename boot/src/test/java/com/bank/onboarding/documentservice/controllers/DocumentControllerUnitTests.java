@@ -93,7 +93,7 @@ class DocumentControllerUnitTests {
 
         when(documentService.uploadDoc(uploadDocumentRequestDTO)).thenReturn(documentDTO);
 
-        mockMvc.perform(put("/document")
+        mockMvc.perform(put("/documents")
                         .header("Authorization", "Bearer " + token)
                         .header("X-Onboarding-Client-Id", clientId)
                         .content(objectMapper.writeValueAsString(uploadDocumentRequestDTO))
@@ -110,12 +110,12 @@ class DocumentControllerUnitTests {
     void deleteDocTest() throws Exception{
         DeleteDocumentRequestDTO deleteDocumentRequestDTO = buildDeleteDocumentRequestDTO();
 
-        mockMvc.perform(delete("/document")
+        mockMvc.perform(delete("/documents")
                         .header("Authorization", "Bearer " + token)
                         .header("X-Onboarding-Client-Id", clientId)
                         .content(objectMapper.writeValueAsString(deleteDocumentRequestDTO))
                         .contentType(MediaType.APPLICATION_JSON_VALUE))
                 .andDo(print())
-                .andExpect(status().isOk());
+                .andExpect(status().isNoContent());
     }
 }

@@ -130,7 +130,7 @@ public class DocumentServiceImpl implements DocumentService {
                 if(accountHasAllDocs)
                     kafkaProducer.sendEvent(accountTopicName, DOCS_UPLOAD, DocUploadEvent.builder().accountNumber(accountNumber).areDocsValid(true).build());
             }else {
-                documentRepoService.deleteDocumentByAccountNumberOrCustomerNumber(accountNumber, true);
+                documentRepoService.deleteDocumentByAccountNumberOrCustomerNumber(accountNumber, documentType, true);
                 kafkaProducer.sendEvent(accountTopicName, DOCS_UPLOAD, DocUploadEvent.builder().accountNumber(accountNumber).areDocsValid(false).build());
             }
         } else if(customerNumber != null && DOCUMENT_TYPES_PHASE_3_CUSTOMER.contains(documentType)){
@@ -146,7 +146,7 @@ public class DocumentServiceImpl implements DocumentService {
                 if(customerHasAllDocs)
                     kafkaProducer.sendEvent(accountTopicName, DOCS_UPLOAD, DocUploadEvent.builder().accountNumber(accountNumber).areDocsValid(true).build());
             }else {
-                documentRepoService.deleteDocumentByAccountNumberOrCustomerNumber(customerNumber, false);
+                documentRepoService.deleteDocumentByAccountNumberOrCustomerNumber(customerNumber, documentType, false);
                 kafkaProducer.sendEvent(accountTopicName, DOCS_UPLOAD, DocUploadEvent.builder().customerNumber(customerNumber).areDocsValid(false).build());
             }
         } else{
