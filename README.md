@@ -1,29 +1,43 @@
-# README #
+## 🧩 Document Service
 
-This README would normally document whatever steps are necessary to get your application up and running.
+The Document Service is a dedicated microservice responsible for managing documents associated with customers and accounts within the banking onboarding system. It encapsulates all business rules related to document storage and deletion, ensuring that required documentation is consistently enforced across the account opening process. Designed according to Domain-Driven Design (DDD) and event-driven microservices principles, this service operates independently with its own database and communicates asynchronously with other services to maintain system-wide consistency.
 
-### What is this repository for? ###
+## 🔍 Key Features
 
-* Quick summary
-* Version
-* [Learn Markdown](https://bitbucket.org/tutorials/markdowndemo)
+- Upload and storage of customer and account documents
+- Replacement of existing documents by type
+- Deletion of documents
+- Event-driven coordination with Customer service
+- Independent document persistence using the Database per Service pattern
 
-### How do I get set up? ###
+## 🔗 API Endpoints
+- PUT /documents - Upload customers and accounts documents.
+- DELETE /documents - Delete customers and accounts documents.
+  
+## 👨‍💻 Technologies
 
-* Summary of set up
-* Configuration
-* Dependencies
-* Database configuration
-* How to run tests
-* Deployment instructions
+<div style="display: inline_block"><br>
+<img align="center" alt="Java" height="40" width="40" src="https://github.com/devicons/devicon/blob/master/icons/java/java-original.svg">
+<img align="center" alt="Spring" height="40" width="40" src="https://github.com/devicons/devicon/blob/master/icons/spring/spring-original.svg">
+<img align="center" alt="Docker" height="40" width="40" src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/docker/docker-original.svg" />
+<img align="center" alt="PostgreSQL" height="40" width="40" src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/postgresql/postgresql-original.svg" />
+</div>
 
-### Contribution guidelines ###
+## 📂 Repository Structure
 
-* Writing tests
-* Code review
-* Other guidelines
+The repository is organized as follows:
 
-### Who do I talk to? ###
+- `boot`: Module that includes the application startup.
+- `services/src/main/java/com/bank/onboarding/accountservice/services`: Contains services and their implementation.
+- `web/src/main/java/com/bank/onboarding/accountservice/controllers`: Contains all the controllers of the application.
 
-* Repo owner or admin
-* Other community or team contact
+## 📋 Prerequisites
+
+- Java 17+
+- Maven
+- Docker
+- PostgreSQL database instance (local or containerized)
+
+## 🌟 Additional Resources
+
+- [Master's dissertation](http://hdl.handle.net/10400.22/26586)
